@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<meta charset="UTF-8">
+<title>Bird Call Dashboard</title>
+
+<style>
+body {
+    font-family: Arial;
+    margin: 20px;
+    background: #f9f9f9;
+}
+
+h2 {
+    margin-bottom: 15px;
+}
+
+/* Layout */
+.dashboard {
+    display: flex;
+    gap: 20px;
+}
+
+/* Chart */
+.chart-container {
+    flex: 2;
+    background: white;
+    padding: 10px;
+    border: 1px solid #ccc;
+}
+
+.chart-container img {
+    width: 100%;
+    height: auto;
+}
+
+/* Detections list */
+.list-container {
+    flex: 1;
+    background: white;
+    border: 1px solid #ccc;
+    padding: 10px;
+}
+
+#detections {
+    height: 400px;
+    overflow-y: auto;
+}
+
+.detection {
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.timestamp {
+    color: #666;
+    font-size: 12px;
+}
+
+.confidence {
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Bird Call Dashboard</h2>
+
+<div style="margin-bottom: 10px;">
+  Timeframe:
+    <select id="timeframe">
+      <option value="1">Last 1 Hours</option>
+      <option value="3">Last 3 Hours</option>
+      <option value="6">Last 6 Hours</option>
+      <option value="12">Last 12 Hours</option>
+      <option value="24">Last 1 Day</option>
+      <option value="168">Last 1 Week</option>
+      <option value="720">Last 1 Month</option>
+      <option value="2160">Last 3 Months</option>
+      <option value="8760">Last 1 Year</option>
+    </select>
+
+
+  Frequency:
+  <select id="frequency">
+    <option value="1min">1 minute</option>
+    <option value="5min" selected>5 minutes</option>
+    <option value="15min">15 minutes</option>
+    <option value="1h">1 hour</option>
+  </select>
+
+  <button onclick="updateChart()">Update</button>
+</div>
+
+<div style="display:flex; gap:20px;">
+  <div id="chart" style="width:60%; height:450px;"></div>
+  <div id="detections" style="width:40%;"></div>
+</div>
+<script>
+async function loadDetections() {
+    try {
+        const res = await fetch("/api/recent?minutes=1440");
+        const data = await res.json();
+        const container = document.getElementById("detections");
+        container.innerHTML = "";
+
+        if (!data.length) {
+            container.innerHTML = "<em>No recent detections</em>";
+            return;
+        }
+
+        data.forEach(d => {
+            const div = document.createElement("div");
+            div.className = "detection";
+
+            const dt = new Date(d.timestamp); // assume timestamp is already local/EST-ish
+            dt.setHours(dt.getHours() + 5);
+
+            const localTime = dt.toLocaleString("en-US", {
+              hour12: true
+            });
+
+            div.innerHTML = `
+              <div><strong>${d.common_name}</strong>
+              <span class="confidence">Confidence: ${Number(d.confidence).toFixed(2)}</span></div>
+              <div class="timestamp">${localTime}</div>
+            `;
+
+
+            // div.innerHTML = `
+            //     <div><strong>${d.common_name}</strong>
+            //     <span class="confidence">(${Number(d.confidence).toFixed(2)})</span></div>
+            //     <div class="timestamp">${d.timestamp}</div>
+            // `;
+            container.appendChild(div);
+        });
+    } catch (err) {
+        console.error("Detections error:", err);
+    }
+}
+
+async function loadChart() {
+    try {
+        const timeframe = document.getElementById("timeframe").value;
+        const frequency = document.getElementById("frequency").value;
+
+        const res = await fetch(`/api/chart-data?timeframe=${timeframe}&frequency=${frequency}`);
+        const data = await res.json();
+
+        const traces = Object.entries(data.series).map(([bird, values]) => ({
+            x: data.timestamps,
+            y: values,
+            name: bird,
+            mode: "lines",
+            type: "scatter"
+        }));
+
+        Plotly.newPlot(
+          "chart",
+          traces,
+          {
+            title: "Bird Call Detections",
+            xaxis: {
+              title: "Time",
+              type: "date",
+              rangeslider: { visible: true }
+            },
+            yaxis: {
+              title: "Detections"
+            },
+            // legend: {
+            //     orientation: "h",
+            //     y: -0.45,
+            //     x: 0.5,
+            //     xanchor: "center",
+            //     font: {
+            //         size: 9
+            //     },
+            //     itemwidth: 40,        // forces wrapping
+            //     traceorder: "normal"
+            // },
+            margin: {
+                b: 160               // space for wrapped legend rows
+            }
+          },
+          { responsive: true }
+    );
+
+
+    } catch (err) {
+        console.error("Chart error:", err);
+    }
+}
+
+function updateChart() {
+    loadChart()
+    loadDetections();
+}
+
+/* Initial loads */
+loadChart();
+loadDetections();
+
+/* Auto-refresh */
+setInterval(loadDetections, 5000);
+</script>
+
+</body>
+</html>

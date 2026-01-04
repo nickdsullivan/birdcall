@@ -26,6 +26,7 @@ class CallIdentifier:
     def run(self):
         while True:
             filename = self.queue.get()
+
             try:
 
                 # Save original stdout/stderr
@@ -44,10 +45,9 @@ class CallIdentifier:
                     lat=40.9807,  
                     lon=-73.6837,
                     date=datetime.date.today(), # This could be changed but whatever
-                    sensitivity=0.1,
+                    sensitivity=0.0,
                     return_all_detections=False
                 )  
-
 
                 recording.analyze()
                 # # Restore original
@@ -60,13 +60,18 @@ class CallIdentifier:
                 timestamp = time.strftime("%Y%m%d_%H%M%S")
                 timestamp2 = time.strftime("%m-%d-%Y %H:%M:%S")
                 csv_file = self.output_path + f"/detections_{timestamp}.csv"
+
                 with open(csv_file, mode='w', newline='') as f:
                     writer = csv.writer(f)
                     writer.writerow(["timestamp", "common_name", "confidence"])
+                    
                     for d in recording.detections:
+                        common_name = d['common_name']
+                        if common_name == "Tundra Swan":
+                            common_name = "Canada Goose"
                         writer.writerow([
                             f"{timestamp2}",
-                            d['common_name'],
+                            common_name,
                             f"{d['confidence']:.3f}"
                         ])
 

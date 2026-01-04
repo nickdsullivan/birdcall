@@ -63,6 +63,9 @@ class UDPListener:
         y = y * scalar
         return np.clip(y, -1.0, 1.0)
     def save_chunk(self, samples):
+
+
+        
             audio_np = np.array(samples, dtype=np.int16)
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             filename = self.output_path + f"/audio_{timestamp}.wav"
@@ -71,25 +74,16 @@ class UDPListener:
             # Save as WAV  
             # audio_np = self.rms_normalize(audio_np, target_db=-20)
             
-            audio_np = nr.reduce_noise(
-                audio_np,
-                sr=self.SAMPLE_RATE,
-                stationary=True,
-                prop_decrease=0.4
-            )
-            audio_np = np.clip(audio_np, -32768, 32767).astype(np.int16)
-
+            # audio_np = nr.reduce_noise(
+            #     audio_np,
+            #     sr=self.SAMPLE_RATE,
+            #     stationary=True,
+            #     prop_decrease=0.4
+            # )
+            # audio_np = np.clip(audio_np, -32768, 32767).astype(np.int16)
             write(filename, self.SAMPLE_RATE, audio_np)
-            # if np.all(audio_np == 0):
-            #     print("No audio detected")
-            #     print(audio_np)
-
-            # else:
-            #     print(audio_np)
-
-            # filename2 = self.output_path + f"/audio_{timestamp}2.wav"
-            # write(filename2, self.SAMPLE_RATE, audio_np)
             self.queue.put(filename)
+
 
     # def save_chunk(self, samples):
     #     # Convert int16 -> float32 [-1, 1]

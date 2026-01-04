@@ -20,6 +20,7 @@ class CSVWriter:
             df = pd.DataFrame(columns=["timestamp", "common_name", "confidence"])
         while True:
             try:
+
                 filename = self.writer_queue.get()
                 temp_df = pd.read_csv(filename)
                 if temp_df.empty:
